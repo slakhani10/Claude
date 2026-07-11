@@ -1,0 +1,58 @@
+# Copy to terraform.tfvars and fill in your network IDs.
+#
+# Every region needs:
+#   functions_subnet_id        - subnet delegated to Microsoft.Web/serverFarms
+#                                (function app outbound VNet integration; this
+#                                is how the collector reaches that region's
+#                                servers over WMI/WinRM)
+#   private_endpoint_subnet_id - subnet for the private endpoints
+#   vnet_id                    - the region's VNet (for private DNS zone links)
+
+name_prefix         = "srvinv"
+resource_group_name = "rg-server-inventory"
+hub_location        = "eastus2"
+
+wmi_username = "CORP\\svc-inventory"
+# wmi_password: pass via TF_VAR_wmi_password or -var, never commit it.
+
+# Phase 1: leave true so the first apply can deploy code + dashboard from
+# your machine. Phase 2: set false and re-apply to go private-endpoint-only.
+public_network_access_enabled = true
+
+regions = {
+  northcentralus = {
+    functions_subnet_id        = "/subscriptions/<sub>/resourceGroups/rg-net-ncus/providers/Microsoft.Network/virtualNetworks/vnet-ncus/subnets/snet-functions"
+    private_endpoint_subnet_id = "/subscriptions/<sub>/resourceGroups/rg-net-ncus/providers/Microsoft.Network/virtualNetworks/vnet-ncus/subnets/snet-private-endpoints"
+    vnet_id                    = "/subscriptions/<sub>/resourceGroups/rg-net-ncus/providers/Microsoft.Network/virtualNetworks/vnet-ncus"
+  }
+  eastus2 = {
+    functions_subnet_id        = "/subscriptions/<sub>/resourceGroups/rg-net-eus2/providers/Microsoft.Network/virtualNetworks/vnet-eus2/subnets/snet-functions"
+    private_endpoint_subnet_id = "/subscriptions/<sub>/resourceGroups/rg-net-eus2/providers/Microsoft.Network/virtualNetworks/vnet-eus2/subnets/snet-private-endpoints"
+    vnet_id                    = "/subscriptions/<sub>/resourceGroups/rg-net-eus2/providers/Microsoft.Network/virtualNetworks/vnet-eus2"
+  }
+  northeurope = {
+    functions_subnet_id        = "/subscriptions/<sub>/resourceGroups/rg-net-neu/providers/Microsoft.Network/virtualNetworks/vnet-neu/subnets/snet-functions"
+    private_endpoint_subnet_id = "/subscriptions/<sub>/resourceGroups/rg-net-neu/providers/Microsoft.Network/virtualNetworks/vnet-neu/subnets/snet-private-endpoints"
+    vnet_id                    = "/subscriptions/<sub>/resourceGroups/rg-net-neu/providers/Microsoft.Network/virtualNetworks/vnet-neu"
+  }
+  uksouth = {
+    functions_subnet_id        = "/subscriptions/<sub>/resourceGroups/rg-net-uks/providers/Microsoft.Network/virtualNetworks/vnet-uks/subnets/snet-functions"
+    private_endpoint_subnet_id = "/subscriptions/<sub>/resourceGroups/rg-net-uks/providers/Microsoft.Network/virtualNetworks/vnet-uks/subnets/snet-private-endpoints"
+    vnet_id                    = "/subscriptions/<sub>/resourceGroups/rg-net-uks/providers/Microsoft.Network/virtualNetworks/vnet-uks"
+  }
+  southeastasia = {
+    functions_subnet_id        = "/subscriptions/<sub>/resourceGroups/rg-net-sea/providers/Microsoft.Network/virtualNetworks/vnet-sea/subnets/snet-functions"
+    private_endpoint_subnet_id = "/subscriptions/<sub>/resourceGroups/rg-net-sea/providers/Microsoft.Network/virtualNetworks/vnet-sea/subnets/snet-private-endpoints"
+    vnet_id                    = "/subscriptions/<sub>/resourceGroups/rg-net-sea/providers/Microsoft.Network/virtualNetworks/vnet-sea"
+  }
+  australiaeast = {
+    functions_subnet_id        = "/subscriptions/<sub>/resourceGroups/rg-net-aue/providers/Microsoft.Network/virtualNetworks/vnet-aue/subnets/snet-functions"
+    private_endpoint_subnet_id = "/subscriptions/<sub>/resourceGroups/rg-net-aue/providers/Microsoft.Network/virtualNetworks/vnet-aue/subnets/snet-private-endpoints"
+    vnet_id                    = "/subscriptions/<sub>/resourceGroups/rg-net-aue/providers/Microsoft.Network/virtualNetworks/vnet-aue"
+  }
+  brazilsoutheast = {
+    functions_subnet_id        = "/subscriptions/<sub>/resourceGroups/rg-net-brse/providers/Microsoft.Network/virtualNetworks/vnet-brse/subnets/snet-functions"
+    private_endpoint_subnet_id = "/subscriptions/<sub>/resourceGroups/rg-net-brse/providers/Microsoft.Network/virtualNetworks/vnet-brse/subnets/snet-private-endpoints"
+    vnet_id                    = "/subscriptions/<sub>/resourceGroups/rg-net-brse/providers/Microsoft.Network/virtualNetworks/vnet-brse"
+  }
+}

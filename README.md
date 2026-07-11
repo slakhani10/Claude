@@ -27,26 +27,33 @@ and no SQL login required.
 
 The design works *with* your network constraint instead of against it:
 regions cannot talk to each other, but **one blob storage account is reachable
-from every region**, so it becomes the only cross-region data path.
+from every region** (via a private endpoint in each region), so it becomes the
+only cross-region data path. Inventory runs in these seven regions:
+
+`northcentralus` · `eastus2` · `northeurope` · `uksouth` · `southeastasia` ·
+`australiaeast` · `brazilsoutheast`
 
 ```mermaid
 flowchart LR
-    subgraph R1["Region: eastus (isolated)"]
-        F1["PowerShell Function App\n(VNet-integrated)"] -- "WMI / WinRM\n(intra-region only)" --> S1["Windows VMs\n+ SQL Server"]
+    subgraph R1["Region: northcentralus (isolated)"]
+        F1["PowerShell Function App\n(VNet-integrated, private endpoint)"] -- "WMI / WinRM\n(intra-region only)" --> S1["Windows VMs\n+ SQL Server"]
+        F1 --> PE1["PE: blob"]
     end
-    subgraph R2["Region: westeurope (isolated)"]
-        F2["PowerShell Function App\n(VNet-integrated)"] -- WMI --> S2["Windows VMs"]
+    subgraph R2["Region: uksouth (isolated)"]
+        F2["PowerShell Function App\n(VNet-integrated, private endpoint)"] -- WMI --> S2["Windows VMs"]
+        F2 --> PE2["PE: blob"]
     end
-    subgraph R3["Region: southeastasia (isolated)"]
-        F3["PowerShell Function App\n(VNet-integrated)"] -- WMI --> S3["Windows VMs"]
+    subgraph R3["… 5 more regions …"]
+        F3["Function Apps"] -- WMI --> S3["Windows VMs"]
+        F3 --> PE3["PE: blob"]
     end
 
-    F1 -- "regions/eastus.json" --> B[("Central blob storage\n(reachable from ALL regions)")]
-    F2 -- "regions/westeurope.json" --> B
-    F3 -- "regions/southeastasia.json" --> B
+    PE1 -- "regions/northcentralus.json" --> B[("Central blob storage\n(private endpoints in ALL regions)")]
+    PE2 -- "regions/uksouth.json" --> B
+    PE3 --> B
 
-    B --> AGG["GetInventory\nHTTP function (aggregator)"]
-    AGG --> D["Interactive dashboard\n(static website, auto-refresh)"]
+    B --> AGG["GetInventory\nHTTP function (private endpoint)"]
+    AGG --> D["Interactive dashboard\n(static website via 'web'\nprivate endpoints)"]
 ```
 
 1. **Regional collectors** (`functions/collector/InventoryCollector`) — a
@@ -70,6 +77,20 @@ flowchart LR
    breakdown, and a searchable / filterable / sortable server table with CSV
    export. Light and dark mode are both supported.
 
+### Private networking
+
+Everything is private-endpoint only once locked down:
+
+| Traffic | Path |
+|---|---|
+| Function app inbound (GetInventory, SCM) | Private endpoint per app (`sites`), `privatelink.azurewebsites.net` |
+| Collector → central storage | Private endpoint per region (`blob`), `privatelink.blob.core.windows.net` |
+| Browser → dashboard static website | Private endpoint per region (`web`), `privatelink.web.core.windows.net` |
+| Function app → region's servers | Regional VNet integration (delegated subnet), WMI/WinRM |
+
+The three private DNS zones are created once and linked to every region's
+VNet, so the same FQDNs resolve to the local private endpoint everywhere.
+
 Because lifecycle rules live in the dashboard, updating EOL dates (e.g. when
 Microsoft publishes Windows Server 2028) is a one-file edit — **no collector
 redeployment**.
@@ -77,9 +98,14 @@ redeployment**.
 ## Repository layout
 
 ```
-infra/
-  main.bicep            Central storage + per-region EP1 function apps + RBAC
-  deploy.ps1            One-shot deployment (infra, code, roles, dashboard)
+infra/terraform/
+  main.tf               Resource group, central storage, static website,
+                        private DNS zones, storage private endpoints
+  function_apps.tf      Per-region EP1 plans + function apps + VNet
+                        integration + private endpoints + RBAC + zip deploy
+  dashboard.tf          Uploads dashboard/ to the $web container
+  variables.tf, outputs.tf, versions.tf
+  terraform.tfvars.example   The seven regions, ready to fill in
 functions/collector/
   InventoryCollector/   Timer trigger: WMI collection -> region blob
   GetInventory/         HTTP trigger: merge region blobs -> dashboard feed
@@ -102,58 +128,75 @@ deploying anything.
 
 ### Prerequisites
 
-- Az PowerShell modules (`Az.Resources`, `Az.Websites`, `Az.Storage`), signed
-  in with rights to create resources and role assignments.
-- **One subnet per region**, delegated to `Microsoft.Web/serverFarms`, for the
-  function apps' VNet integration (this is how each app reaches its region's
-  servers behind the firewall).
-- A **WMI service account** with remote WMI/WinRM rights on the target servers
-  (typically a domain account in the local Administrators group, or a
-  hardened least-privilege WMI account).
+- Terraform ≥ 1.7 and an authenticated `azurerm` context (e.g. `az login`)
+  with rights to create resources **and role assignments** (subscription
+  Reader is granted to each app's managed identity).
+- In **each of the seven regions**:
+  - a subnet **delegated to `Microsoft.Web/serverFarms`** for the function
+    app's VNet integration (this is how it reaches that region's servers);
+  - a subnet for **private endpoints**;
+  - the VNet ID (for the private DNS zone links).
+- A **WMI service account** with remote WMI/WinRM rights on the target
+  servers.
 - Regional firewall rules allowing, **within each region only**:
   - Function subnet → servers: TCP 5985/5986 (WinRM; the collector uses
-    WSMan by default, set `WMI_TRANSPORT=Dcom` to use classic DCOM instead —
-    that needs TCP 135 + dynamic RPC ports).
-  - Function subnet → central storage account: HTTPS 443 (or a private
-    endpoint for the storage account inside each regional VNet).
+    WSMan by default, set `WMI_TRANSPORT=Dcom` for classic DCOM — that needs
+    TCP 135 + dynamic RPC ports).
+  - Function subnet → the region's storage `blob` private endpoint: TCP 443.
 
-### Deploy
+### Phase 1 — deploy (public deployment path still open)
 
-```powershell
-./infra/deploy.ps1 `
-    -ResourceGroupName rg-server-inventory `
-    -NamePrefix srvinv `
-    -HubLocation eastus `
-    -Regions @(
-        @{ name = 'eastus';     subnetId = '<subnet resource id in eastus>' }
-        @{ name = 'westeurope'; subnetId = '<subnet resource id in westeurope>' }
-    ) `
-    -WmiUsername 'CORP\svc-inventory'
+```bash
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars   # fill in subnet/VNet IDs
+export TF_VAR_wmi_password='<service account password>'
+terraform init
+terraform apply
 ```
 
-Then:
+With the default `public_network_access_enabled = true`, Terraform can
+zip-deploy the function code and upload the dashboard from your machine while
+all private endpoints are already being created.
 
-1. In the portal, copy a **function key** for `GetInventory` from any one of
-   the apps and set the full URL in `dashboard/config.js`:
+### Phase 2 — lock down
+
+In `terraform.tfvars` set:
+
+```hcl
+public_network_access_enabled = false
+```
+
+and `terraform apply` again. Storage and every function app now refuse public
+traffic; everything flows through the private endpoints. From this point,
+applies that push new code or dashboard content must run from a machine or
+pipeline agent with private connectivity to those endpoints.
+
+### Wire up the dashboard
+
+1. Get a **function key** for `GetInventory` from any one of the apps and set
+   the full URL in `dashboard/config.js`:
    ```js
-   apiUrl: "https://srvinv-func-eastus.azurewebsites.net/api/GetInventory?code=<key>"
+   apiUrl: "https://srvinv-func-eastus2.azurewebsites.net/api/GetInventory?code=<key>"
    ```
-   Re-upload `config.js` to the `$web` container (or re-run the script).
+   (The hostname resolves to the private endpoint from linked VNets.)
+   Re-apply Terraform — `dashboard.tf` detects the content change and
+   re-uploads the file.
 2. **Move `WMI_PASSWORD` to Key Vault**: create a secret, grant each app's
    managed identity *Key Vault Secrets User*, and change the app setting to
-   `@Microsoft.KeyVault(SecretUri=https://<vault>.vault.azure.net/secrets/wmi-password/)`.
-3. Tighten `Access-Control-Allow-Origin` in `GetInventory/run.ps1` to your
-   dashboard's URL, and consider putting Entra ID auth (Easy Auth) in front
-   of both the function and the static site.
+   `@Microsoft.KeyVault(SecretUri=https://<vault>.vault.azure.net/secrets/wmi-password/)`
+   — the Terraform config ignores drift on that setting so your change
+   sticks.
+3. Tighten `Access-Control-Allow-Origin` in `GetInventory/run.ps1` to the
+   dashboard's URL.
 
 ## Configuration reference (collector app settings)
 
 | Setting | Purpose | Default |
 |---|---|---|
-| `INVENTORY_REGION` | The one region this app inventories | — (required) |
-| `INVENTORY_STORAGE_ACCOUNT` | Central storage account name | — (required) |
+| `INVENTORY_REGION` | The one region this app inventories | set by Terraform |
+| `INVENTORY_STORAGE_ACCOUNT` | Central storage account name | set by Terraform |
 | `INVENTORY_CONTAINER` | Blob container | `inventory` |
-| `WMI_USERNAME` / `WMI_PASSWORD` | Remote WMI credentials | — (required) |
+| `WMI_USERNAME` / `WMI_PASSWORD` | Remote WMI credentials | set by Terraform |
 | `WMI_TRANSPORT` | `Wsman` or `Dcom` | `Wsman` |
 | `COLLECTOR_THROTTLE` | Parallel WMI sessions | `8` |
 
@@ -182,3 +225,6 @@ migration list. Verify dates against
   timer schedules.
 - **SQL clusters/AGs**: detection is per-node (service + registry), which is
   usually what licensing and patching reviews want.
+- **Dashboard auth**: the static website is network-restricted by the private
+  endpoints; add Entra ID (e.g. Front Door + Easy Auth or an internal reverse
+  proxy) if you also need identity-based access control.

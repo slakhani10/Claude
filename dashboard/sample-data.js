@@ -5,19 +5,19 @@
 window.SAMPLE_INVENTORY = {
   generatedAt: new Date().toISOString(),
   regions: [
-    { region: "eastus",        collectedAt: new Date(Date.now() - 4 * 60000).toISOString(),  serverCount: 5 },
-    { region: "westeurope",    collectedAt: new Date(Date.now() - 7 * 60000).toISOString(),  serverCount: 4 },
+    { region: "northcentralus",        collectedAt: new Date(Date.now() - 4 * 60000).toISOString(),  serverCount: 5 },
+    { region: "northeurope",    collectedAt: new Date(Date.now() - 7 * 60000).toISOString(),  serverCount: 4 },
     { region: "southeastasia", collectedAt: new Date(Date.now() - 11 * 60000).toISOString(), serverCount: 3 },
   ],
   servers: [
     {
-      name: "APP-EUS-01", region: "eastus", resourceGroup: "rg-apps-eus", ipAddress: "10.10.1.4",
+      name: "APP-NCU-01", region: "northcentralus", resourceGroup: "rg-apps-ncu", ipAddress: "10.10.1.4",
       osCaption: "Microsoft Windows Server 2019 Standard", osVersion: "10.0.17763", osBuild: "17763",
       cores: 4, logicalProcessors: 8, memoryGB: 16, domain: "corp.contoso.com",
       sql: { installed: false, instances: [] }, collectionError: null,
     },
     {
-      name: "SQL-EUS-01", region: "eastus", resourceGroup: "rg-data-eus", ipAddress: "10.10.2.10",
+      name: "SQL-NCU-01", region: "northcentralus", resourceGroup: "rg-data-ncu", ipAddress: "10.10.2.10",
       osCaption: "Microsoft Windows Server 2016 Datacenter", osVersion: "10.0.14393", osBuild: "14393",
       cores: 8, logicalProcessors: 16, memoryGB: 64, domain: "corp.contoso.com",
       sql: {
@@ -29,7 +29,7 @@ window.SAMPLE_INVENTORY = {
       collectionError: null,
     },
     {
-      name: "LEGACY-EUS-02", region: "eastus", resourceGroup: "rg-legacy-eus", ipAddress: "10.10.3.21",
+      name: "LEGACY-NCU-02", region: "northcentralus", resourceGroup: "rg-legacy-ncu", ipAddress: "10.10.3.21",
       osCaption: "Microsoft Windows Server 2008 R2 Enterprise", osVersion: "6.1.7601", osBuild: "7601",
       cores: 2, logicalProcessors: 4, memoryGB: 8, domain: "corp.contoso.com",
       sql: {
@@ -41,20 +41,20 @@ window.SAMPLE_INVENTORY = {
       collectionError: null,
     },
     {
-      name: "WEB-EUS-03", region: "eastus", resourceGroup: "rg-apps-eus", ipAddress: "10.10.1.7",
+      name: "WEB-NCU-03", region: "northcentralus", resourceGroup: "rg-apps-ncu", ipAddress: "10.10.1.7",
       osCaption: "Microsoft Windows Server 2022 Datacenter Azure Edition", osVersion: "10.0.20348", osBuild: "20348",
       cores: 4, logicalProcessors: 8, memoryGB: 16, domain: "corp.contoso.com",
       sql: { installed: false, instances: [] }, collectionError: null,
     },
     {
-      name: "FILE-EUS-04", region: "eastus", resourceGroup: "rg-infra-eus", ipAddress: "10.10.4.5",
+      name: "FILE-NCU-04", region: "northcentralus", resourceGroup: "rg-infra-ncu", ipAddress: "10.10.4.5",
       osCaption: null, osVersion: null, osBuild: null,
       cores: null, logicalProcessors: null, memoryGB: null, domain: null,
       sql: { installed: false, instances: [] },
       collectionError: "WinRM cannot complete the operation: connection timed out",
     },
     {
-      name: "ERP-WEU-01", region: "westeurope", resourceGroup: "rg-erp-weu", ipAddress: "10.20.1.4",
+      name: "ERP-NEU-01", region: "northeurope", resourceGroup: "rg-erp-neu", ipAddress: "10.20.1.4",
       osCaption: "Microsoft Windows Server 2012 R2 Standard", osVersion: "6.3.9600", osBuild: "9600",
       cores: 8, logicalProcessors: 16, memoryGB: 32, domain: "corp.contoso.com",
       sql: {
@@ -66,7 +66,7 @@ window.SAMPLE_INVENTORY = {
       collectionError: null,
     },
     {
-      name: "SQL-WEU-02", region: "westeurope", resourceGroup: "rg-data-weu", ipAddress: "10.20.2.8",
+      name: "SQL-NEU-02", region: "northeurope", resourceGroup: "rg-data-neu", ipAddress: "10.20.2.8",
       osCaption: "Microsoft Windows Server 2022 Datacenter", osVersion: "10.0.20348", osBuild: "20348",
       cores: 16, logicalProcessors: 32, memoryGB: 128, domain: "corp.contoso.com",
       sql: {
@@ -79,13 +79,13 @@ window.SAMPLE_INVENTORY = {
       collectionError: null,
     },
     {
-      name: "APP-WEU-03", region: "westeurope", resourceGroup: "rg-apps-weu", ipAddress: "10.20.1.9",
+      name: "APP-NEU-03", region: "northeurope", resourceGroup: "rg-apps-neu", ipAddress: "10.20.1.9",
       osCaption: "Microsoft Windows Server 2016 Standard", osVersion: "10.0.14393", osBuild: "14393",
       cores: 4, logicalProcessors: 8, memoryGB: 16, domain: "corp.contoso.com",
       sql: { installed: false, instances: [] }, collectionError: null,
     },
     {
-      name: "DC-WEU-01", region: "westeurope", resourceGroup: "rg-identity-weu", ipAddress: "10.20.5.4",
+      name: "DC-NEU-01", region: "northeurope", resourceGroup: "rg-identity-neu", ipAddress: "10.20.5.4",
       osCaption: "Microsoft Windows Server 2019 Datacenter", osVersion: "10.0.17763", osBuild: "17763",
       cores: 2, logicalProcessors: 4, memoryGB: 8, domain: "corp.contoso.com",
       sql: { installed: false, instances: [] }, collectionError: null,
