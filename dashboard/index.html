@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Azure Server Inventory — OS &amp; SQL Lifecycle</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Azure Server Inventory</h1>
+      <span class="meta" id="generatedAt"></span>
+      <span class="badge-demo" id="demoBadge" hidden>Demo data</span>
+      <div class="refresh">
+        <span id="countdown"></span>
+        <button id="refreshBtn" type="button">Refresh now</button>
+        <button id="exportBtn" type="button">Export CSV</button>
+      </div>
+    </header>
+
+    <div class="tiles" id="tiles"></div>
+
+    <section class="panel">
+      <h2>OS lifecycle by region</h2>
+      <div id="regionBars"></div>
+      <div class="legend">
+        <span><span class="dot eol"></span>End of life</span>
+        <span><span class="dot nearing"></span>Nearing EOL (&lt; 12 months)</span>
+        <span><span class="dot supported"></span>Supported</span>
+        <span><span class="dot unknown"></span>Unknown / unreachable</span>
+      </div>
+    </section>
+
+    <div class="filters">
+      <input id="search" type="search" placeholder="Search server, OS, SQL edition, resource group…">
+      <select id="regionFilter"><option value="">All regions</option></select>
+      <select id="osFilter">
+        <option value="">OS: all statuses</option>
+        <option value="eol">OS: end of life</option>
+        <option value="nearing">OS: nearing EOL</option>
+        <option value="supported">OS: supported</option>
+        <option value="unknown">OS: unknown</option>
+      </select>
+      <select id="sqlFilter">
+        <option value="">SQL: all servers</option>
+        <option value="any">Has SQL Server</option>
+        <option value="none">No SQL Server</option>
+        <option value="eol">SQL: end of life</option>
+        <option value="nearing">SQL: nearing EOL</option>
+        <option value="supported">SQL: compliant</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr id="headerRow">
+            <th data-sort="name">Server</th>
+            <th data-sort="region">Region</th>
+            <th data-sort="osCaption">Operating system (WMI caption)</th>
+            <th data-sort="osStatus">OS lifecycle</th>
+            <th data-sort="cores" class="num">Cores</th>
+            <th data-sort="sqlSummary">SQL Server</th>
+            <th data-sort="sqlStatus">SQL lifecycle</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" hidden>No servers match the current filters.</div>
+    </div>
+
+    <footer>
+      <span>Lifecycle = Microsoft end of extended support; "nearing" = within <span id="nearingMonths"></span> months.</span>
+      <span id="regionFreshness"></span>
+    </footer>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="lifecycle.js"></script>
+  <script src="sample-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

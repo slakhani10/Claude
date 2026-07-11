@@ -1,0 +1,152 @@
+/* Azure Server Inventory dashboard styles.
+   Design tokens defined once per color scheme; components reference roles. */
+
+:root {
+  --page:           #f9f9f7;
+  --surface:        #fcfcfb;
+  --ink:            #0b0b0b;
+  --ink-secondary:  #52514e;
+  --ink-muted:      #898781;
+  --hairline:       #e1e0d9;
+  --border:         rgba(11, 11, 11, 0.10);
+
+  /* Status palette (fixed - never reused for anything but state) */
+  --status-eol:        #d03b3b;
+  --status-nearing:    #fab219;
+  --status-supported:  #0ca30c;
+  --status-unknown:    #898781;
+
+  --status-eol-tint:       rgba(208, 59, 59, 0.12);
+  --status-nearing-tint:   rgba(250, 178, 25, 0.16);
+  --status-supported-tint: rgba(12, 163, 12, 0.12);
+  --status-unknown-tint:   rgba(137, 135, 129, 0.14);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page:          #0d0d0d;
+    --surface:       #1a1a19;
+    --ink:           #ffffff;
+    --ink-secondary: #c3c2b7;
+    --ink-muted:     #898781;
+    --hairline:      #2c2c2a;
+    --border:        rgba(255, 255, 255, 0.10);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.wrap { max-width: 1280px; margin: 0 auto; padding: 24px 20px 56px; }
+
+/* ---------- Header ---------- */
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+header h1 { font-size: 20px; font-weight: 650; margin: 0; }
+.meta { color: var(--ink-secondary); font-size: 13px; }
+.badge-demo {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px;
+  color: var(--ink-secondary);
+}
+.refresh { margin-left: auto; color: var(--ink-muted); font-size: 12px; display: flex; gap: 10px; align-items: center; }
+.refresh button {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 8px; padding: 5px 12px; font: inherit; cursor: pointer;
+}
+.refresh button:hover { border-color: var(--ink-muted); }
+
+/* ---------- Stat tiles ---------- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 18px 0; }
+.tile {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px; cursor: pointer; text-align: left; font: inherit; color: inherit;
+}
+.tile:hover { border-color: var(--ink-muted); }
+.tile.active { outline: 2px solid var(--ink); outline-offset: -1px; }
+.tile .label { color: var(--ink-secondary); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.tile .value { font-size: 28px; font-weight: 650; margin-top: 2px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+.dot.eol       { background: var(--status-eol); }
+.dot.nearing   { background: var(--status-nearing); }
+.dot.supported { background: var(--status-supported); }
+.dot.unknown   { background: var(--status-unknown); }
+
+/* ---------- Region breakdown ---------- */
+.panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; margin-bottom: 18px;
+}
+.panel h2 { font-size: 13px; font-weight: 600; color: var(--ink-secondary); margin: 0 0 12px; }
+.region-row { display: grid; grid-template-columns: 140px 1fr 90px; gap: 12px; align-items: center; margin-bottom: 10px; }
+.region-row:last-child { margin-bottom: 0; }
+.region-name { font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.region-age { font-size: 12px; color: var(--ink-muted); text-align: right; font-variant-numeric: tabular-nums; }
+.bar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; gap: 2px; background: transparent; }
+.bar .seg { min-width: 3px; }
+.bar .seg.eol       { background: var(--status-eol); }
+.bar .seg.nearing   { background: var(--status-nearing); }
+.bar .seg.supported { background: var(--status-supported); }
+.bar .seg.unknown   { background: var(--status-unknown); }
+.legend { display: flex; gap: 16px; margin-top: 12px; font-size: 12px; color: var(--ink-secondary); flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- Filters ---------- */
+.filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.filters input, .filters select {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 10px; font: inherit;
+}
+.filters input { flex: 1 1 220px; min-width: 180px; }
+.filters input::placeholder { color: var(--ink-muted); }
+
+/* ---------- Table ---------- */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 960px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+tbody tr:last-child td { border-bottom: none; }
+th {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--ink-muted); cursor: pointer; user-select: none; white-space: nowrap;
+  position: sticky; top: 0; background: var(--surface);
+}
+th .arrow { font-size: 10px; }
+tbody tr:hover td { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+td.num { font-variant-numeric: tabular-nums; text-align: right; }
+th.num { text-align: right; }
+.server-name { font-weight: 600; white-space: nowrap; }
+td:first-child { min-width: 170px; }
+.sub { color: var(--ink-muted); font-size: 12px; }
+.error-note { color: var(--status-eol); font-size: 12px; }
+
+/* Status pill: icon + label + color, never color alone */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 999px; padding: 2px 10px 2px 8px;
+  font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap;
+}
+.pill .icon { font-size: 11px; line-height: 1; }
+.pill.eol       { background: var(--status-eol-tint); }
+.pill.eol .icon { color: var(--status-eol); }
+.pill.nearing       { background: var(--status-nearing-tint); }
+.pill.nearing .icon { color: var(--status-nearing); }
+.pill.supported       { background: var(--status-supported-tint); }
+.pill.supported .icon { color: var(--status-supported); }
+.pill.unknown       { background: var(--status-unknown-tint); }
+.pill.unknown .icon { color: var(--status-unknown); }
+.pill .until { font-weight: 400; color: var(--ink-secondary); }
+
+.sql-instance { margin-bottom: 4px; }
+.sql-instance:last-child { margin-bottom: 0; }
+
+.empty { padding: 32px; text-align: center; color: var(--ink-muted); }
+
+footer { margin-top: 14px; color: var(--ink-muted); font-size: 12px; display: flex; gap: 16px; flex-wrap: wrap; }
+footer a { color: inherit; }
