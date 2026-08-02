@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site.site_code }} - Site IP Allocator{% endblock %}
+
+{% block content %}
+{% if saved %}<div class="banner banner-ok">Allocation saved for {{ site.site_code }}.</div>{% endif %}
+
+<section class="card">
+  <div class="result-head">
+    <div>
+      <h2>{{ site.site_code }}</h2>
+      <p class="meta">
+        Site range <span class="mono">{{ site.supernet }}</span>
+        {% if site.created_utc %}
+          &middot; allocated {{ site.created_utc }}
+          {%- if site.created_by and site.created_by != 'unknown' %} by {{ site.created_by }}{% endif %}
+        {% else %}
+          &middot; <strong>preview - not saved</strong>
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="actions">
+      {% if stored %}
+        <a class="button" href="{{ url_for('site_csv', site_code=site.site_code) }}">Download CSV</a>
+        <form method="post" action="{{ url_for('site_delete', site_code=site.site_code) }}"
+              onsubmit="return confirm('Delete the allocation for {{ site.site_code }}? Its range becomes available again.');">
+          <button type="submit" class="danger">Delete</button>
+        </form>
+      {% else %}
+        <form method="post" action="{{ url_for('save') }}">
+          <input type="hidden" name="site_code" value="{{ site.site_code }}">
+          <input type="hidden" name="supernet" value="{{ site.supernet }}">
+          <button type="submit" {% if not storage_configured %}disabled
+                  title="Storage is not configured"{% endif %}>Save allocation</button>
+        </form>
+        <a class="button quiet" href="{{ url_for('index') }}">Start over</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>VLAN</th><th>Name</th><th>Range</th><th>Netmask</th>
+        <th>Gateway</th><th>Host range</th><th>Broadcast</th><th class="num">Usable</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for vlan in site.vlans %}
+      <tr>
+        <td class="mono strong">{{ vlan.vlan_id }}</td>
+        <td class="mono">{{ vlan.vlan_name }}</td>
+        <td class="mono strong">{{ vlan.cidr }}</td>
+        <td class="mono muted">{{ vlan.netmask }}</td>
+        <td class="mono">{{ vlan.gateway }}</td>
+        <td class="mono muted">{{ vlan.first_host }} &ndash; {{ vlan.last_host }}</td>
+        <td class="mono muted">{{ vlan.broadcast }}</td>
+        <td class="mono num">{{ vlan.usable_hosts }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if site.reserve %}
+    <p class="hint">
+      <strong>Reserve:</strong>
+      {% for block in site.reserve %}<span class="mono">{{ block }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
+      &mdash; unallocated, available for extra VLANs at this site.
+    </p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,31 @@
+# Copy to terraform.tfvars and edit. Nothing here is required - every value
+# has a default - but these are the ones worth thinking about.
+
+name_prefix         = "ipam"
+resource_group_name = "rg-site-ip-allocator"
+location            = "eastus2"
+
+# The VNet the app runs in. This is infrastructure addressing and has nothing
+# to do with the site /19s the app hands out - those are just data.
+vnet_address_space             = ["10.250.0.0/24"]
+private_endpoint_subnet_prefix = "10.250.0.0/26"
+app_integration_subnet_prefix  = "10.250.0.64/26"
+management_subnet_prefix       = "10.250.0.128/26"
+
+# P1v3 for production. B1 or S1 also support private endpoints and VNet
+# integration if this is a test instance.
+app_service_sku = "P1v3"
+
+# PHASE 1 (first apply): leave true so Terraform can zip-deploy the code over
+# the public SCM endpoint. PHASE 2: set false and re-apply to close the app
+# to everything outside the VNet.
+webapp_public_network_access_enabled = true
+
+# Storage never needs public access - the app reaches it over the private
+# endpoint. Set true only to browse tables from the portal without a jumpbox.
+storage_public_network_access_enabled = false
+
+tags = {
+  workload = "site-ip-allocator"
+  owner    = "network-team"
+}

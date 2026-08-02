@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <h2>Allocate a site</h2>
+  <form method="post" action="{{ url_for('allocate') }}" class="alloc-form">
+    <label>
+      <span>Site code</span>
+      <input name="site_code" value="{{ site_code }}" placeholder="LON01"
+             maxlength="10" required autofocus>
+      <small>2-10 characters, letters and digits</small>
+    </label>
+
+    <label>
+      <span>Site range (/19)</span>
+      <input name="supernet" value="{{ supernet }}" placeholder="10.20.0.0/19"
+             pattern="[0-9./]+" required>
+      <small>Must be an aligned /19, e.g. 10.20.0.0/19</small>
+    </label>
+
+    <button type="submit">Preview VLANs</button>
+  </form>
+
+  <p class="hint">
+    The /19 is carved into eight /23s, one per VLAN
+    ({{ vlan_ids | join(', ') }}). Each VLAN's name is its ID. The upper half of
+    the /19 is held back as reserve. Nothing is saved until you confirm.
+  </p>
+</section>
+
+<section class="card">
+  <h2>Allocated sites</h2>
+  {% if not storage_configured %}
+    <p class="hint">
+      Storage isn't configured, so allocations can be previewed but not saved.
+      Set <code>IPAM_STORAGE_ACCOUNT</code> to the storage account name.
+    </p>
+  {% elif sites %}
+    <table>
+      <thead>
+        <tr><th>Site</th><th>Range</th><th>VLANs</th><th>Allocated</th><th>By</th></tr>
+      </thead>
+      <tbody>
+        {% for site in sites %}
+        <tr>
+          <td><a href="{{ url_for('site_detail', site_code=site.site_code) }}">{{ site.site_code }}</a></td>
+          <td class="mono">{{ site.supernet }}</td>
+          <td>{{ site.vlan_count }}</td>
+          <td class="muted">{{ site.created_utc }}</td>
+          <td class="muted">{{ site.created_by }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="hint">No sites allocated yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

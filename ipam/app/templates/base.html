@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Site IP Allocator{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1><a href="{{ url_for('index') }}">Site IP Allocator</a></h1>
+      <span class="meta">/19 per site &rarr; eight /23 VLANs</span>
+      {% if not storage_configured %}
+        <span class="badge-warn" title="IPAM_STORAGE_ACCOUNT is not set">preview only</span>
+      {% endif %}
+    </header>
+
+    {% if error %}<div class="banner banner-error">{{ error }}</div>{% endif %}
+    {% if warning %}<div class="banner banner-warn">{{ warning }}</div>{% endif %}
+
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>
