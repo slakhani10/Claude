@@ -115,6 +115,8 @@ dashboard/
   lifecycle.js          Windows + SQL EOL tables and classification logic
   config.js             Set apiUrl here; empty = demo mode with sample data
   sample-data.js        Bundled demo snapshot (open index.html locally to try)
+scripts/
+  Get-AzReservationSavings.ps1   Reservation cost & savings report (see below)
 ```
 
 ## Try it in 10 seconds (no Azure needed)
@@ -213,6 +215,81 @@ means within `NEARING_MONTHS` (12) months of the date. ESU coverage is
 deliberately ignored — an ESU server still shows red so it stays on your
 migration list. Verify dates against
 [Microsoft Lifecycle](https://learn.microsoft.com/lifecycle/) when updating.
+
+## Reservation cost & savings report
+
+`scripts/Get-AzReservationSavings.ps1` is a standalone report — it needs
+nothing from the dashboard or the function apps. Dot-source it and run:
+
+```powershell
+Connect-AzAccount
+. ./scripts/Get-AzReservationSavings.ps1
+Show-AzReservationSavings
+```
+
+```
+Name              Sku              Region      Qty Term Cost/mo (USD) PAYG/mo (USD) Saving/mo (USD) Saving % Util % Mo left Source
+----              ---              ------      --- ---- ------------- ------------- --------------- -------- ------ ------- ------
+prod-d4sv3-eastus Standard_D4s_v3  eastus       10 P3Y       1,015.60      1,401.60          386.00     27.5   97.2      18 CostManagement
+dev-e8sv5-weu     Standard_E8s_v5  westeurope    4 P1Y         966.67      1,471.68          505.01     34.3   35.0       5 Retail
+
+  Reservation cost / month                  1,982.27 USD
+  Pay-as-you-go equivalent                  2,873.28 USD
+  Projected saving / month                    891.01 USD
+  Projected saving / year                  10,692.12 USD
+  Realized at current utilization             439.43 USD
+```
+
+`Get-AzReservationSavings` emits one object per reservation, so the data is
+yours to slice — `Export-Csv`, `ConvertTo-Json`, `Where-Object`, whatever:
+
+```powershell
+Get-AzReservationSavings | Sort-Object MonthlySaving | Select-Object -First 10
+Get-AzReservationSavings -CostScope '/providers/Microsoft.Billing/billingAccounts/1234567' |
+    Export-Csv ./reservation-savings.csv -NoTypeInformation
+```
+
+### Where the numbers come from
+
+**Monthly cost** resolves from the best source available, and every row
+records which one won in its `CostSource` property:
+
+| Source | What it is | Requires |
+|---|---|---|
+| `CostManagement` | Actual amortized cost billed last complete month, grouped by `ReservationId` — reflects *your* prices | Cost Management Reader on an EA/MCA billing scope |
+| `BillingPlan` | The real recurring payment, for reservations bought on the monthly plan | Reservation Reader |
+| `Retail` | Public list price for the term, divided across it | nothing (public API) |
+
+**Pay-as-you-go comparison** always comes from the public Azure Retail Prices
+API. For VMs the *base* compute rate is used — Linux, non-Spot — because a
+reservation discounts compute only, never the Windows or SQL licence on top
+of it. Comparing against the Windows rate would overstate savings.
+
+**Projected vs realized.** `MonthlySaving` is what the reservation earns if
+fully used. `RealizedMonthlySaving` scales the pay-as-you-go side by actual
+utilization, so an under-used reservation shows what it is *really* returning
+— and goes negative when it costs more than the usage it covers. Anything
+below 90% utilization is called out separately under the totals.
+
+### Caveats worth knowing
+
+- **Non-VM reservations** (Cosmos DB, SQL vCore, App Service, Databricks…)
+  often have no `armSkuName` in the retail catalogue. Those rows report the
+  reservation and its cost but leave the savings columns empty with a note,
+  rather than guessing at a match.
+- **Retail rows are list price.** If you have an EA/MCA discount, the
+  `Retail` source understates your saving. Pass `-CostScope` with a billing
+  account to get `CostManagement` numbers instead.
+- **Instance size flexibility** means a reservation may be covering sizes
+  other than its own SKU. The pay-as-you-go comparison uses the reservation's
+  own SKU, which is the standard method, but the realized figure is the one
+  to trust when flexibility is on.
+- The current month is always partial, so the default billing month is the
+  **last complete calendar month**. Override with `-CostMonth`.
+- Savings assume **730 hours/month** (Azure's own convention); override with
+  `-HoursPerMonth`.
+
+Run `Get-Help Get-AzReservationSavings -Full` for every parameter.
 
 ## Notes & extension points
 
