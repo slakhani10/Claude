@@ -63,6 +63,12 @@ resource "azurerm_windows_function_app" "regional" {
     # Recommended post-deploy: replace with
     # "@Microsoft.KeyVault(SecretUri=https://<vault>.vault.azure.net/secrets/wmi-password/)"
     WMI_PASSWORD = var.wmi_password
+
+    # GetReservationSavings. Reservations are tenant-wide, so every app can
+    # serve this endpoint; they share the cache blob in the central account.
+    RESERVATION_COST_SCOPE    = var.reservation_cost_scope
+    RESERVATION_CURRENCY      = var.reservation_currency
+    RESERVATION_CACHE_MINUTES = var.reservation_cache_minutes
   }
 
   lifecycle {
@@ -110,3 +116,30 @@ resource "azurerm_role_assignment" "subscription_reader" {
   role_definition_name = "Reader"
   principal_id         = azurerm_windows_function_app.regional[each.key].identity[0].principal_id
 }
+
+# Read amortized cost for the GetReservationSavings endpoint.
+#
+# This covers the app's own SUBSCRIPTION only. Reservations are usually shared
+# across subscriptions and billed at the enrollment, so for complete numbers
+# grant the same role at the billing scope and set reservation_cost_scope.
+resource "azurerm_role_assignment" "cost_management_reader" {
+  for_each             = var.regions
+  scope                = data.azurerm_subscription.current.id
+  role_definition_name = "Cost Management Reader"
+  principal_id         = azurerm_windows_function_app.regional[each.key].identity[0].principal_id
+}
+
+# NOTE - Reservation Reader is NOT assignable here. Reservation orders live at
+# /providers/Microsoft.Capacity, outside any subscription, so the azurerm
+# provider cannot scope a role assignment to them. Grant it once by hand after
+# the first apply, to each app's principal id (terraform output
+# function_app_principal_ids):
+#
+#   az role assignment create --role "Reservations Reader" \
+#     --assignee <principal id> \
+#     --scope /providers/Microsoft.Capacity/reservationOrders/<order id>
+#
+# Or, to cover every current and future order at once, grant the principal
+# Reservations Reader at the billing account scope in the portal:
+#   Cost Management + Billing > <billing account> > Access control (IAM).
+# Without it the endpoint returns an empty list and says so in "warnings".

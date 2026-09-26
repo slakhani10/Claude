@@ -69,3 +69,38 @@ variable "collector_schedule" {
   type        = string
   default     = "0 */15 * * * *"
 }
+
+variable "reservation_cost_scope" {
+  description = <<-EOT
+    Billing scope the GetReservationSavings endpoint queries for amortized
+    cost, e.g. "/providers/Microsoft.Billing/billingAccounts/1234567" (EA) or
+    ".../billingAccounts/<id>/billingProfiles/<id>" (MCA). Leave empty to use
+    the app's own subscription, which only sees that subscription's share of a
+    shared reservation - the endpoint then falls back to public list prices for
+    anything it cannot cost, and says so per row.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "reservation_currency" {
+  description = "ISO currency code for retail price comparisons in the reservation report (USD, EUR, GBP...)."
+  type        = string
+  default     = "USD"
+
+  validation {
+    condition     = can(regex("^[A-Z]{3}$", var.reservation_currency))
+    error_message = "reservation_currency must be a three-letter ISO code, e.g. USD."
+  }
+}
+
+variable "reservation_cache_minutes" {
+  description = <<-EOT
+    How long GetReservationSavings serves its cached result before
+    recollecting. Reservation costs move at most daily and the Cost Management
+    query API throttles hard, so keep this well above the dashboard's poll
+    interval. Default 6 hours.
+  EOT
+  type        = number
+  default     = 360
+}

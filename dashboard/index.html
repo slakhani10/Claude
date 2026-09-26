@@ -12,73 +12,159 @@
       <h1>Azure Server Inventory</h1>
       <span class="meta" id="generatedAt"></span>
       <span class="badge-demo" id="demoBadge" hidden>Demo data</span>
-      <div class="refresh">
+      <div class="refresh" id="serversToolbar">
         <span id="countdown"></span>
         <button id="refreshBtn" type="button">Refresh now</button>
         <button id="exportBtn" type="button">Export CSV</button>
       </div>
     </header>
 
-    <div class="tiles" id="tiles"></div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab-btn active" type="button" role="tab" id="tabbtn-servers"
+              data-tab="servers" aria-controls="tab-servers" aria-selected="true">Servers</button>
+      <button class="tab-btn" type="button" role="tab" id="tabbtn-reservations"
+              data-tab="reservations" aria-controls="tab-reservations" aria-selected="false">Reservations</button>
+    </nav>
 
-    <section class="panel">
-      <h2>OS lifecycle by region</h2>
-      <div id="regionBars"></div>
-      <div class="legend">
-        <span><span class="dot eol"></span>End of life</span>
-        <span><span class="dot nearing"></span>Nearing EOL (&lt; 12 months)</span>
-        <span><span class="dot supported"></span>Supported</span>
-        <span><span class="dot unknown"></span>Unknown / unreachable</span>
+    <!-- ================================================== Servers ====== -->
+    <div id="tab-servers" role="tabpanel" aria-labelledby="tabbtn-servers">
+      <div class="tiles" id="tiles"></div>
+
+      <section class="panel">
+        <h2>OS lifecycle by region</h2>
+        <div id="regionBars"></div>
+        <div class="legend">
+          <span><span class="dot eol"></span>End of life</span>
+          <span><span class="dot nearing"></span>Nearing EOL (&lt; 12 months)</span>
+          <span><span class="dot supported"></span>Supported</span>
+          <span><span class="dot unknown"></span>Unknown / unreachable</span>
+        </div>
+      </section>
+
+      <div class="filters">
+        <input id="search" type="search" placeholder="Search server, OS, SQL edition, resource group…">
+        <select id="regionFilter"><option value="">All regions</option></select>
+        <select id="osFilter">
+          <option value="">OS: all statuses</option>
+          <option value="eol">OS: end of life</option>
+          <option value="nearing">OS: nearing EOL</option>
+          <option value="supported">OS: supported</option>
+          <option value="unknown">OS: unknown</option>
+        </select>
+        <select id="sqlFilter">
+          <option value="">SQL: all servers</option>
+          <option value="any">Has SQL Server</option>
+          <option value="none">No SQL Server</option>
+          <option value="eol">SQL: end of life</option>
+          <option value="nearing">SQL: nearing EOL</option>
+          <option value="supported">SQL: compliant</option>
+        </select>
       </div>
-    </section>
 
-    <div class="filters">
-      <input id="search" type="search" placeholder="Search server, OS, SQL edition, resource group…">
-      <select id="regionFilter"><option value="">All regions</option></select>
-      <select id="osFilter">
-        <option value="">OS: all statuses</option>
-        <option value="eol">OS: end of life</option>
-        <option value="nearing">OS: nearing EOL</option>
-        <option value="supported">OS: supported</option>
-        <option value="unknown">OS: unknown</option>
-      </select>
-      <select id="sqlFilter">
-        <option value="">SQL: all servers</option>
-        <option value="any">Has SQL Server</option>
-        <option value="none">No SQL Server</option>
-        <option value="eol">SQL: end of life</option>
-        <option value="nearing">SQL: nearing EOL</option>
-        <option value="supported">SQL: compliant</option>
-      </select>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr id="headerRow">
+              <th data-sort="name">Server</th>
+              <th data-sort="region">Region</th>
+              <th data-sort="osCaption">Operating system (WMI caption)</th>
+              <th data-sort="osStatus">OS lifecycle</th>
+              <th data-sort="cores" class="num">Cores</th>
+              <th data-sort="sqlSummary">SQL Server</th>
+              <th data-sort="sqlStatus">SQL lifecycle</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="empty" id="empty" hidden>No servers match the current filters.</div>
+      </div>
+
+      <footer>
+        <span>Lifecycle = Microsoft end of extended support; "nearing" = within <span id="nearingMonths"></span> months.</span>
+        <span id="regionFreshness"></span>
+      </footer>
     </div>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr id="headerRow">
-            <th data-sort="name">Server</th>
-            <th data-sort="region">Region</th>
-            <th data-sort="osCaption">Operating system (WMI caption)</th>
-            <th data-sort="osStatus">OS lifecycle</th>
-            <th data-sort="cores" class="num">Cores</th>
-            <th data-sort="sqlSummary">SQL Server</th>
-            <th data-sort="sqlStatus">SQL lifecycle</th>
-          </tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
-      <div class="empty" id="empty" hidden>No servers match the current filters.</div>
-    </div>
+    <!-- ============================================= Reservations ====== -->
+    <div id="tab-reservations" role="tabpanel" aria-labelledby="tabbtn-reservations" hidden>
+      <div class="tab-head">
+        <span class="meta" id="resGeneratedAt">Loading reservations…</span>
+        <div class="refresh">
+          <button id="resRefreshBtn" type="button">Refresh now</button>
+          <button id="resExportBtn" type="button">Export CSV</button>
+        </div>
+      </div>
 
-    <footer>
-      <span>Lifecycle = Microsoft end of extended support; "nearing" = within <span id="nearingMonths"></span> months.</span>
-      <span id="regionFreshness"></span>
-    </footer>
+      <div id="resWarnings"></div>
+
+      <div class="tiles" id="resTiles"></div>
+
+      <section class="panel">
+        <h2>Monthly saving by reservation</h2>
+        <p class="panel-note">
+          Bar length is the pay-as-you-go cost of the same capacity, so longer means
+          more spend at stake. The filled part is what the reservation saves you;
+          its color is whether you are actually <em>realizing</em> that saving at
+          current utilization.
+        </p>
+        <div id="resBars"></div>
+        <div class="legend">
+          <span><span class="dot supported"></span>Fully used — saving realized</span>
+          <span><span class="dot nearing"></span>Under-used — saving partly lost</span>
+          <span><span class="dot eol"></span>Losing money — costs more than the usage it covers</span>
+          <span><span class="dot unknown"></span>Utilization unknown</span>
+        </div>
+      </section>
+
+      <div class="filters">
+        <input id="resSearch" type="search" placeholder="Search reservation, SKU, region, order id…">
+        <select id="resRegionFilter"><option value="">All regions</option></select>
+        <select id="resTypeFilter"><option value="">All resource types</option></select>
+        <select id="resHealthFilter">
+          <option value="">All reservations</option>
+          <option value="good">Realizing the saving</option>
+          <option value="nearing">Under-used (&lt; 90%)</option>
+          <option value="eol">Losing money</option>
+          <option value="expiring">Expiring within 3 months</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr id="resHeaderRow">
+              <th data-sort="name">Reservation</th>
+              <th data-sort="region">Region</th>
+              <th data-sort="quantity" class="num">Qty</th>
+              <th data-sort="term">Term</th>
+              <th data-sort="monthlyCost" class="num">Cost / month</th>
+              <th data-sort="payGoMonthlyCost" class="num">Pay-as-you-go</th>
+              <th data-sort="monthlySaving" class="num">Saving / month</th>
+              <th data-sort="utilizationPercent">Utilization</th>
+              <th data-sort="monthsRemaining" class="num">Months left</th>
+              <th data-sort="costSource">Cost source</th>
+            </tr>
+          </thead>
+          <tbody id="resRows"></tbody>
+        </table>
+        <div class="empty" id="resEmpty" hidden>No reservations match the current filters.</div>
+      </div>
+
+      <footer>
+        <span>
+          Savings compare the reservation against public pay-as-you-go rates for the
+          same SKU (base compute rate — a reservation never discounts a Windows or
+          SQL licence). "Realized" scales that by actual utilization.
+        </span>
+        <span id="resCostMonth"></span>
+      </footer>
+    </div>
   </div>
 
   <script src="config.js"></script>
   <script src="lifecycle.js"></script>
   <script src="sample-data.js"></script>
   <script src="app.js"></script>
+  <script src="reservations.js"></script>
 </body>
 </html>

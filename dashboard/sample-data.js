@@ -128,3 +128,121 @@ window.SAMPLE_INVENTORY = {
     },
   ],
 };
+
+/**
+ * Bundled demo reservations, used when reservationsApiUrl is empty.
+ * Shape matches the GetReservationSavings function's response exactly.
+ *
+ * Deliberately a mixed bag, so the demo shows every state the view renders:
+ * a well-used reservation, an under-used one, one that costs more than the
+ * usage it covers, a non-VM type with no comparable retail meter, and rows
+ * costed from each of the three cost sources.
+ */
+const resMonth = (() => {
+  const date = new Date();
+  date.setUTCMonth(date.getUTCMonth() - 1);
+  return date.toISOString().slice(0, 7);
+})();
+const resInMonths = (months) => {
+  const date = new Date();
+  date.setUTCMonth(date.getUTCMonth() + months);
+  return date.toISOString();
+};
+
+window.SAMPLE_RESERVATIONS = {
+  generatedAt: new Date().toISOString(),
+  currency: "USD",
+  costMonth: resMonth,
+  costScope: null,
+  totals: {
+    count: 6,
+    monthlyCost: 9227.62,
+    payGoMonthlyCost: 13181.28,
+    monthlySaving: 3953.66,
+    annualSaving: 47443.92,
+    remainingTermSaving: 67506.4,
+    realizedMonthlySaving: 1758.98,
+    savingPercent: 30.0,
+    underutilizedCount: 2,
+  },
+  reservations: [
+    {
+      name: "prod-d4sv3-ncus", resourceType: "VirtualMachines", sku: "Standard_D4s_v3",
+      region: "northcentralus", quantity: 20, term: "P3Y", billingPlan: "Monthly",
+      state: "Succeeded", scope: "Shared", instanceFlexibility: "On", autoRenew: true,
+      effectiveDate: resInMonths(-18), expiryDate: resInMonths(18), monthsRemaining: 18,
+      monthlyCost: 1902.4, payGoHourlyRate: 0.192, payGoMonthlyCost: 2803.2,
+      monthlySaving: 900.8, savingPercent: 32.1, annualSaving: 10809.6,
+      remainingTermSaving: 16214.4, utilizationPercent: 98.4,
+      realizedMonthlySaving: 856.95, costSource: "CostManagement",
+      reservationOrderId: "aaaaaaaa-1111-2222-3333-000000000001",
+      reservationId: "bbbbbbbb-1111-2222-3333-000000000001", notes: null,
+    },
+    {
+      name: "prod-e16sv5-neu", resourceType: "VirtualMachines", sku: "Standard_E16s_v5",
+      region: "northeurope", quantity: 8, term: "P3Y", billingPlan: "Upfront",
+      state: "Succeeded", scope: "Shared", instanceFlexibility: "On", autoRenew: true,
+      effectiveDate: resInMonths(-8), expiryDate: resInMonths(28), monthsRemaining: 28,
+      monthlyCost: 3271.11, payGoHourlyRate: 1.008, payGoMonthlyCost: 5886.72,
+      monthlySaving: 2615.61, savingPercent: 44.4, annualSaving: 31387.32,
+      remainingTermSaving: 73237.08, utilizationPercent: 96.1,
+      realizedMonthlySaving: 2384.62, costSource: "CostManagement",
+      reservationOrderId: "aaaaaaaa-1111-2222-3333-000000000002",
+      reservationId: "bbbbbbbb-1111-2222-3333-000000000002", notes: null,
+    },
+    {
+      name: "dev-d8sv4-sea", resourceType: "VirtualMachines", sku: "Standard_D8s_v4",
+      region: "southeastasia", quantity: 6, term: "P1Y", billingPlan: "Upfront",
+      state: "Succeeded", scope: "Single", instanceFlexibility: "On", autoRenew: false,
+      effectiveDate: resInMonths(-9), expiryDate: resInMonths(3), monthsRemaining: 3,
+      monthlyCost: 1341.67, payGoHourlyRate: 0.384, payGoMonthlyCost: 1681.92,
+      monthlySaving: 340.25, savingPercent: 20.2, annualSaving: 4083.0,
+      remainingTermSaving: 1020.75, utilizationPercent: 41.3,
+      realizedMonthlySaving: -647.02, costSource: "Retail",
+      reservationOrderId: "aaaaaaaa-1111-2222-3333-000000000003",
+      reservationId: "bbbbbbbb-1111-2222-3333-000000000003",
+      notes: "List price - excludes any negotiated discount",
+    },
+    {
+      name: "test-b2ms-ncus", resourceType: "VirtualMachines", sku: "Standard_B2ms",
+      region: "northcentralus", quantity: 10, term: "P1Y", billingPlan: "Monthly",
+      state: "Succeeded", scope: "Single", instanceFlexibility: "On", autoRenew: false,
+      effectiveDate: resInMonths(-2), expiryDate: resInMonths(10), monthsRemaining: 10,
+      monthlyCost: 468.0, payGoHourlyRate: 0.0832, payGoMonthlyCost: 607.36,
+      monthlySaving: 139.36, savingPercent: 22.9, annualSaving: 1672.32,
+      remainingTermSaving: 1393.6, utilizationPercent: 72.5,
+      realizedMonthlySaving: -27.66, costSource: "BillingPlan",
+      reservationOrderId: "aaaaaaaa-1111-2222-3333-000000000004",
+      reservationId: "bbbbbbbb-1111-2222-3333-000000000004", notes: null,
+    },
+    {
+      name: "sql-mi-gp-neu", resourceType: "SqlDatabases", sku: "SQLDB_GP_Gen5",
+      region: "northeurope", quantity: 16, term: "P1Y", billingPlan: "Upfront",
+      state: "Succeeded", scope: "Shared", instanceFlexibility: null, autoRenew: true,
+      effectiveDate: resInMonths(-5), expiryDate: resInMonths(7), monthsRemaining: 7,
+      monthlyCost: 1892.0, payGoHourlyRate: null, payGoMonthlyCost: null,
+      monthlySaving: null, savingPercent: null, annualSaving: null,
+      remainingTermSaving: null, utilizationPercent: 99.2,
+      realizedMonthlySaving: null, costSource: "BillingPlan",
+      reservationOrderId: "aaaaaaaa-1111-2222-3333-000000000005",
+      reservationId: "bbbbbbbb-1111-2222-3333-000000000005",
+      notes: "No public pay-as-you-go meter matched SKU 'SQLDB_GP_Gen5' in 'northeurope'",
+    },
+    {
+      name: "cosmos-ru-shared", resourceType: "CosmosDb", sku: "CosmosDBReservedCapacity",
+      region: null, quantity: 100, term: "P1Y", billingPlan: "Upfront",
+      state: "Succeeded", scope: "Shared", instanceFlexibility: null, autoRenew: false,
+      effectiveDate: resInMonths(-11), expiryDate: resInMonths(1), monthsRemaining: 1,
+      monthlyCost: 352.44, payGoHourlyRate: null, payGoMonthlyCost: null,
+      monthlySaving: null, savingPercent: null, annualSaving: null,
+      remainingTermSaving: null, utilizationPercent: null,
+      realizedMonthlySaving: null, costSource: "BillingPlan",
+      reservationOrderId: "aaaaaaaa-1111-2222-3333-000000000006",
+      reservationId: "bbbbbbbb-1111-2222-3333-000000000006",
+      notes: "No public pay-as-you-go meter matched SKU 'CosmosDBReservedCapacity' in ''",
+    },
+  ],
+  warnings: [
+    "Demo data. Cost Management could not break cost down by reservation on scope '/subscriptions/<id>'; some rows fall back to public list prices.",
+  ],
+};

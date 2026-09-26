@@ -22,3 +22,16 @@ output "function_app_private_endpoint_ips" {
     region => pe.private_service_connection[0].private_ip_address
   }
 }
+
+output "function_app_principal_ids" {
+  description = <<-EOT
+    Managed identity principal id of each function app. Grant these
+    "Reservations Reader" by hand (reservation orders sit outside any
+    subscription, so Terraform cannot scope a role assignment to them) - see
+    the note at the bottom of function_apps.tf.
+  EOT
+  value = {
+    for region, app in azurerm_windows_function_app.regional :
+    region => app.identity[0].principal_id
+  }
+}

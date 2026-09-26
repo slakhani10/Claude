@@ -150,3 +150,72 @@ td:first-child { min-width: 170px; }
 
 footer { margin-top: 14px; color: var(--ink-muted); font-size: 12px; display: flex; gap: 16px; flex-wrap: wrap; }
 footer a { color: inherit; }
+
+/* ---------- Tabs ---------- */
+.tabs { display: flex; gap: 4px; margin: 16px 0 4px; border-bottom: 1px solid var(--hairline); }
+.tab-btn {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--ink-secondary); font: inherit; font-weight: 550;
+  padding: 8px 14px; margin-bottom: -1px; cursor: pointer;
+}
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
+.tab-head { display: flex; align-items: baseline; gap: 12px; margin-top: 16px; }
+.tab-head .refresh { margin-left: auto; }
+
+/* ---------- Reservations ---------- */
+.tile.static { cursor: default; }
+.tile.static:hover { border-color: var(--border); }
+/* Proportional figures for display-size values; tabular is for table columns. */
+.tile .value.money { font-variant-numeric: proportional-nums; font-size: 24px; }
+.tile-sub { display: block; color: var(--ink-muted); font-size: 12px; margin-top: 2px; }
+
+.panel-note { color: var(--ink-secondary); font-size: 12px; margin: -4px 0 14px; max-width: 76ch; }
+
+.res-row { display: grid; grid-template-columns: 180px 1fr 96px; gap: 12px; align-items: center; margin-bottom: 10px; }
+.res-row:last-child { margin-bottom: 0; }
+.res-name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.res-figure { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-secondary); }
+
+/* Meter: fill carries state, the track is a lighter step of the same ramp, so
+   the state reads across the whole bar. Data-end rounded, baseline square. */
+.meter { display: flex; }
+.meter-track {
+  height: 14px; border-radius: 0 4px 4px 0;
+  background: var(--status-unknown-tint); min-width: 3px;
+}
+.meter-fill { height: 100%; border-radius: 0 4px 4px 0; }
+.meter-fill:not([style*=":0%"]) { min-width: 3px; }
+.meter-fill.good    { background: var(--status-supported); }
+.meter-fill.nearing { background: var(--status-nearing); }
+.meter-fill.eol     { background: var(--status-eol); }
+.meter-fill.unknown { background: var(--status-unknown); }
+.meter-track:has(.meter-fill.good)    { background: var(--status-supported-tint); }
+.meter-track:has(.meter-fill.nearing) { background: var(--status-nearing-tint); }
+.meter-track:has(.meter-fill.eol)     { background: var(--status-eol-tint); }
+.meter.small { width: 64px; }
+.meter.small .meter-track, .meter.small .meter-fill { height: 8px; border-radius: 0 3px 3px 0; }
+
+.util { display: flex; align-items: center; gap: 8px; }
+.util-value { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink-secondary); }
+.health-icon.good    { color: var(--status-supported); }
+.health-icon.nearing { color: var(--status-nearing); }
+.health-icon.eol     { color: var(--status-eol); }
+.health-icon.unknown { color: var(--status-unknown); }
+
+td.num.positive { color: var(--ink); }
+td.num.negative { color: var(--status-eol); }
+.source-tag {
+  font-size: 11px; color: var(--ink-secondary); border: 1px solid var(--border);
+  border-radius: 999px; padding: 1px 8px; white-space: nowrap;
+}
+/* Status color rides the glyph, never the words: the amber step is 1.79:1 on
+   the light surface and unreadable as text. */
+.note-flag { color: var(--ink-secondary); font-size: 12px; max-width: 34ch; }
+.note-flag::before { content: "\26A0"; color: var(--status-nearing); margin-right: 4px; }
+.omission { margin-top: 12px; max-width: 76ch; }
+
+.banner {
+  background: var(--status-nearing-tint); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px; margin: 16px 0 0; font-size: 13px;
+}

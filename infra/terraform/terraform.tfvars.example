@@ -56,3 +56,14 @@ regions = {
     vnet_id                    = "/subscriptions/<sub>/resourceGroups/rg-net-brse/providers/Microsoft.Network/virtualNetworks/vnet-brse"
   }
 }
+
+# ---------------------------------------------------------------------------
+# Reservation cost & savings endpoint (optional - sensible defaults)
+# ---------------------------------------------------------------------------
+# Billing scope for amortized cost. Leave unset to use the app's own
+# subscription; set it to an EA/MCA billing scope for complete numbers on
+# reservations shared across subscriptions.
+# reservation_cost_scope = "/providers/Microsoft.Billing/billingAccounts/1234567"
+
+reservation_currency      = "USD"
+reservation_cache_minutes = 360

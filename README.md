@@ -54,6 +54,10 @@ flowchart LR
 
     B --> AGG["GetInventory\nHTTP function (private endpoint)"]
     AGG --> D["Interactive dashboard\n(static website via 'web'\nprivate endpoints)"]
+
+    RES["GetReservationSavings\nHTTP function"] -- "reservations + cost\n(tenant-wide, not regional)" --> ARM[("Azure Capacity +\nCost Management APIs")]
+    RES -- "cached savings.json" --> B
+    RES --> D
 ```
 
 1. **Regional collectors** (`functions/collector/InventoryCollector`) — a
@@ -70,12 +74,19 @@ flowchart LR
 2. **Aggregator** (`functions/collector/GetInventory`) — an HTTP function
    (deployed with every app; call any one of them) that merges all region
    blobs into a single JSON feed.
-3. **Dashboard** (`dashboard/`) — a dependency-free static web app hosted on
-   the storage account's static website. It polls the aggregator every 60
-   seconds, classifies each OS and SQL build against the lifecycle tables in
-   `dashboard/lifecycle.js`, and renders stat tiles, a per-region status
-   breakdown, and a searchable / filterable / sortable server table with CSV
-   export. Light and dark mode are both supported.
+3. **Reservation savings** (`functions/collector/GetReservationSavings`) — an
+   HTTP function serving the dashboard's second tab. Reservations are
+   tenant-wide rather than regional, so it sits outside the per-region
+   collection: any one app can answer it, and it caches its result in the same
+   central account. See [Reservation cost & savings](#reservation-cost--savings).
+4. **Dashboard** (`dashboard/`) — a dependency-free static web app hosted on
+   the storage account's static website, in two tabs. **Servers** polls the
+   aggregator every 60 seconds, classifies each OS and SQL build against the
+   lifecycle tables in `dashboard/lifecycle.js`, and renders stat tiles, a
+   per-region status breakdown, and a searchable / filterable / sortable table
+   with CSV export. **Reservations** shows what each reservation costs per
+   month against pay-as-you-go, and whether its utilization is actually earning
+   that saving. Light and dark mode are both supported.
 
 ### Private networking
 
@@ -109,22 +120,29 @@ infra/terraform/
 functions/collector/
   InventoryCollector/   Timer trigger: WMI collection -> region blob
   GetInventory/         HTTP trigger: merge region blobs -> dashboard feed
+  GetReservationSavings/  HTTP trigger: reservation costs -> dashboard feed
+  Modules/
+    AzReservationSavings/ Reservation costing logic, shared by the HTTP
+                        endpoint and the console script (Azure Functions puts
+                        Modules/ on $env:PSModulePath automatically)
   host.json, profile.ps1, requirements.psd1
 dashboard/
   index.html, app.js, styles.css
+  reservations.js       Reservations tab: tiles, saving meters, table, CSV
   lifecycle.js          Windows + SQL EOL tables and classification logic
-  config.js             Set apiUrl here; empty = demo mode with sample data
-  sample-data.js        Bundled demo snapshot (open index.html locally to try)
+  config.js             Set apiUrl / reservationsApiUrl here; empty = demo mode
+  sample-data.js        Bundled demo snapshots (open index.html locally to try)
 scripts/
-  Get-AzReservationSavings.ps1   Reservation cost & savings report (see below)
+  Get-AzReservationSavings.ps1   Console entry point for the module above
 ```
 
 ## Try it in 10 seconds (no Azure needed)
 
-Open `dashboard/index.html` in a browser. With `config.js` → `apiUrl` left
-empty, the dashboard runs on the bundled sample snapshot so you can see the
-red/amber/green classification, filters, region bars, and CSV export before
-deploying anything.
+Open `dashboard/index.html` in a browser. With both URLs in `config.js` left
+empty, the dashboard runs on bundled sample snapshots so you can see the
+red/amber/green classification, filters, region bars and CSV export on the
+**Servers** tab, and the cost/saving meters on the **Reservations** tab,
+before deploying anything.
 
 ## Deploying
 
@@ -175,12 +193,14 @@ pipeline agent with private connectivity to those endpoints.
 
 ### Wire up the dashboard
 
-1. Get a **function key** for `GetInventory` from any one of the apps and set
-   the full URL in `dashboard/config.js`:
+1. Get **function keys** for `GetInventory` and `GetReservationSavings` from
+   any one of the apps and set both URLs in `dashboard/config.js`:
    ```js
-   apiUrl: "https://srvinv-func-eastus2.azurewebsites.net/api/GetInventory?code=<key>"
+   apiUrl:             "https://srvinv-func-eastus2.azurewebsites.net/api/GetInventory?code=<key>"
+   reservationsApiUrl: "https://srvinv-func-eastus2.azurewebsites.net/api/GetReservationSavings?code=<key>"
    ```
-   (The hostname resolves to the private endpoint from linked VNets.)
+   (The hostname resolves to the private endpoint from linked VNets.) Either
+   may be left empty — that tab then runs on bundled demo data.
    Re-apply Terraform — `dashboard.tf` detects the content change and
    re-uploads the file.
 2. **Move `WMI_PASSWORD` to Key Vault**: create a secret, grant each app's
@@ -201,6 +221,9 @@ pipeline agent with private connectivity to those endpoints.
 | `WMI_USERNAME` / `WMI_PASSWORD` | Remote WMI credentials | set by Terraform |
 | `WMI_TRANSPORT` | `Wsman` or `Dcom` | `Wsman` |
 | `COLLECTOR_THROTTLE` | Parallel WMI sessions | `8` |
+| `RESERVATION_COST_SCOPE` | Billing scope for amortized reservation cost | the app's subscription |
+| `RESERVATION_CURRENCY` | ISO currency for retail price comparisons | `USD` |
+| `RESERVATION_CACHE_MINUTES` | How long `GetReservationSavings` serves its cached result | `360` |
 
 Collection cadence is the timer CRON in
 `InventoryCollector/function.json` (default every 15 minutes); dashboard poll
@@ -216,10 +239,45 @@ deliberately ignored — an ESU server still shows red so it stays on your
 migration list. Verify dates against
 [Microsoft Lifecycle](https://learn.microsoft.com/lifecycle/) when updating.
 
-## Reservation cost & savings report
+## Reservation cost & savings
 
-`scripts/Get-AzReservationSavings.ps1` is a standalone report — it needs
-nothing from the dashboard or the function apps. Dot-source it and run:
+The same costing logic is served three ways, from one implementation in
+`functions/collector/Modules/AzReservationSavings`:
+
+| Surface | What it is |
+|---|---|
+| **Reservations tab** | In the dashboard, beside Servers — tiles, a saving meter per reservation, and a filterable table |
+| **`GetReservationSavings`** | HTTP function that feeds that tab (deployed with every regional app; call any one) |
+| **`Get-AzReservationSavings`** | The same report in a console, for ad-hoc slicing and CSV |
+
+### The dashboard tab
+
+Bar length is the pay-as-you-go cost of the same capacity, so the longest bars
+are where the money is. The filled part is what the reservation saves you, and
+its color answers a different question — whether you are actually *realizing*
+that saving at current utilization:
+
+| Color | Meaning |
+|---|---|
+| 🟢 **Fully used** | ≥ 90% utilized — the projected saving is real |
+| 🟠 **Under-used** | Below 90% — you are paying for capacity you are not using |
+| 🔴 **Losing money** | Realized saving is negative: the reservation costs more than the usage it covers |
+| ⚪ **Unknown** | No utilization data for this reservation |
+
+That distinction is the point of the tab. A reservation can show a healthy
+30% projected discount and still be losing money, because the discount only
+applies to hours you actually consume. The table's *Saving / month* column is
+the projected figure; the utilization meter beside it is what you are getting.
+
+Reservations are tenant-wide rather than regional, so this endpoint is not
+part of the per-region collection: any one app can answer it, and the result
+is **cached in the central storage account** (`reservations/savings.json`,
+6 hours by default). Reservation costs move at most daily, and the Cost
+Management query API throttles hard, so the tab loads on first open and then
+only when you ask — unlike the servers tab's 60-second poll. `Refresh now`
+sends `?refresh=true`, which bypasses the cache and recollects.
+
+### The console report
 
 ```powershell
 Connect-AzAccount
@@ -271,6 +329,34 @@ utilization, so an under-used reservation shows what it is *really* returning
 — and goes negative when it costs more than the usage it covers. Anything
 below 90% utilization is called out separately under the totals.
 
+### Permissions — the one manual step
+
+Terraform grants each app's managed identity **Cost Management Reader** on the
+subscription, but it cannot grant **Reservations Reader**: reservation orders
+live under `/providers/Microsoft.Capacity`, outside any subscription, so the
+`azurerm` provider has no scope to assign at. Without it the endpoint returns
+an empty list and says so in the response's `warnings`, which the dashboard
+shows as a banner.
+
+Grant it once after the first apply, using `terraform output
+function_app_principal_ids`:
+
+```bash
+# Per reservation order:
+az role assignment create --role "Reservations Reader" \
+  --assignee <principal id> \
+  --scope /providers/Microsoft.Capacity/reservationOrders/<order id>
+```
+
+Or cover every current and future order at once by granting the principal
+Reservations Reader at the billing account scope: **Cost Management + Billing
+→ <billing account> → Access control (IAM)**.
+
+For *actual billed* costs rather than list prices, the identity also needs
+Cost Management Reader at an EA/MCA **billing** scope, set as
+`reservation_cost_scope`. The subscription-level grant Terraform makes only
+sees that subscription's share of a shared reservation.
+
 ### Caveats worth knowing
 
 - **Non-VM reservations** (Cosmos DB, SQL vCore, App Service, Databricks…)
@@ -288,6 +374,9 @@ below 90% utilization is called out separately under the totals.
   **last complete calendar month**. Override with `-CostMonth`.
 - Savings assume **730 hours/month** (Azure's own convention); override with
   `-HoursPerMonth`.
+- The dashboard tab reads a **cached** result (default 6 hours), so a figure
+  there can lag a reservation you bought this morning. `Refresh now` forces a
+  recollection; `RESERVATION_CACHE_MINUTES` changes the TTL.
 
 Run `Get-Help Get-AzReservationSavings -Full` for every parameter.
 
